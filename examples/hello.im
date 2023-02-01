@@ -1,0 +1,27 @@
+{
+    format: "PE",
+    target: "x64",
+    import: [
+        "OUTPUT",
+        "EXIT",
+    ],
+    body: [
+        {
+            type: 'call',
+            value: standard@OUTPUT
+            arguments: [
+                constants@1
+            ]
+        },
+        {
+            type: 'call',
+            value: standard@EXIT,
+            arguments: [
+                0
+            ]
+        }
+    ],
+    constants: [
+        "Hello world!"
+    ]
+}
