@@ -1,5 +1,6 @@
 local config = require('config')
 local frog = require('lib/frog')
+local json = require('lib/json')
 
 local program = require('src/frontend/nodes/expression')
 
@@ -27,6 +28,7 @@ function parser.new(flags, tokens, comments)
 
 	if self.token then
 		frog:throw(
+			self.token,
 			'Extraneous token following body',
 			'Maybe try removing this token'
 		)

@@ -37,9 +37,15 @@ function frog:croak(message)
     return self
 end
 
-function frog:throw(error, hint)
-    self:croak(error)
-    self:croak(hint)
+function frog:throw(token, error, hint)
+    self
+        :print('Error: ' .. error)
+        :print('| ' .. self.lines[token.position[1] - 1])
+        :print('| ' .. self.lines[token.position[1]])
+        :print('| ' .. self.lines[token.position[1] + 1])
+
+    self:croak('| ' .. string.rep('-', token.position[2]) .. '^')
+    self:croak('Help: ' .. hint)
 end
 
 function frog:dump(stage, object)

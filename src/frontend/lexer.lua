@@ -25,6 +25,11 @@ function lexer.new(input)
         self:step(input:sub(i, i))
     end
 
+    frog.lines = {}
+    for line in input:gmatch("([^\n]*)\n?") do
+        table.insert(frog.lines, line or '')
+    end
+
 
     if self.token.type then
         if self.token.type == 'string' then
@@ -56,7 +61,9 @@ end
 
 function lexer:create(character)
     local code = string.byte(character)
-    self.token = {}
+    self.token = {
+        position = { frog.line, frog.char }
+    }
 
     if 
         character == ' ' or character == '\t' or
@@ -90,7 +97,8 @@ function lexer:create(character)
     elseif self.symbols[character] then
         table.insert(self.tokens, {
             type = self.symbols[character],
-            characters = character
+            characters = character,
+            position = { frog.line, frog.char }
         })
     else
         frog:throw(

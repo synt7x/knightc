@@ -77,5 +77,11 @@ return function(state)
             name = state:expect('identifier'),
             value = expression(state)
         }
+    elseif state:accept('W') then
+        return {
+            type = 'while',
+            condition = expression(state),
+            body = expression(state)
+        }
     end
 end

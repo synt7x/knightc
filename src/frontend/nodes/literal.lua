@@ -3,5 +3,7 @@ return function(node)
         return node:accept('string')
     elseif node:test('number') then
         return node:accept('number')
+    elseif node:test('identifier') then
+        return node:accept('identifier')
     end
 end

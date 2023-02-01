@@ -4,7 +4,7 @@ return function(state)
     if state:accept('B') then
         return {
             type = 'block',
-            body = node.value
+            body = expression(state)
         }
     elseif state:accept('C') then
         node.value = expression(state)
