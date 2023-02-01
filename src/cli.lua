@@ -16,7 +16,7 @@ local defaults = {
     ['Q'] = false, -- Quiet mode
 }
 
-function getflags(args)
+local function getflags(args)
     local flags = defaults
     local inputs = {}
     local last
