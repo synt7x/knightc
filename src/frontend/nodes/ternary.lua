@@ -3,8 +3,8 @@ return function(state)
         return {
             type = 'if',
             condition = expression(state),
-            left = expression(state),
-            right = expression(state)
+            body = expression(state),
+            catch = expression(state)
         }
     elseif state:accept('G') then
         return {

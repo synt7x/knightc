@@ -3,6 +3,7 @@ local json = require('lib/json')
 
 frog.line = 0
 frog.char = 0
+frog.lines = {}
 frog.options = {
     ['q'] = false,
     ['Q'] = false,
@@ -14,6 +15,10 @@ end
 
 function frog:character()
     self.char = self.char + 1
+end
+
+function frog:getLines()
+    return self.lines
 end
 
 function frog:newline()
@@ -39,23 +44,21 @@ end
 
 function frog:throw(token, error, hint)
     self
-        :print('Error: ' .. error)
-        :print('| ' .. self.lines[token.position[1] - 1])
-        :print('| ' .. self.lines[token.position[1]])
-        :print('| ' .. self.lines[token.position[1] + 1])
+        :croak('Error: ' .. error)
+        :croak('| ' .. self.lines[token.position[1] + 1])
 
-    self:croak('| ' .. string.rep('-', token.position[2]) .. '^')
-    self:croak('Help: ' .. hint)
+    self:croak('| ' .. string.rep('-', token.position[2]) .. string.rep('^', token.characters and #token.characters or 1))
+    self:croak('Help: ' .. hint .. '\n')
 end
 
 function frog:dump(stage, object)
     if self.options['P'] == stage then
-        local file = io.open(self.options['o'] .. '.lua', 'w')
+        local file = io.open(self.options['o'], 'w')
 
         if file then
             file:write(json(object))
         else
-            self:error('Could not open file: ' .. self.opions['o'] .. '.lua')
+            self:error('Could not open file: ' .. self.opions['o'])
         end
 
         os.exit(0)

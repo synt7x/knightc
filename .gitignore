@@ -2,3 +2,5 @@ examples
 .vscode
 .git
 *.out.lua
+*.out.json
+*.out

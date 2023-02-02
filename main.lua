@@ -3,6 +3,7 @@ local json = require('lib/json')
 
 local lexer = require('src/frontend/lexer')
 local parser = require('src/frontend/parser')
+local symbols = require('src/frontend/symbols')
 
 local cli = require('src/cli')
 local flags, inputs = cli(arg)
@@ -29,6 +30,9 @@ for i, name in ipairs(inputs) do
 
         local ast = parser.new(flags, tokens, comments)
         frog:dump('ast', ast)
+
+        local symboltable = symbols.new(ast)
+        frog:dump('symboltable', symboltable)
     else
         frog:croak(
             string.format(

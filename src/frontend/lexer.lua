@@ -21,13 +21,12 @@ function lexer.new(input)
 
     if not input then return {} end
 
-    for i = 1, #input do
-        self:step(input:sub(i, i))
+    for line in input:gmatch("([^\n]*)\n?") do
+        table.insert(frog:getLines(), line or '')
     end
 
-    frog.lines = {}
-    for line in input:gmatch("([^\n]*)\n?") do
-        table.insert(frog.lines, line or '')
+    for i = 1, #input do
+        self:step(input:sub(i, i))
     end
 
 
@@ -71,7 +70,7 @@ function lexer:create(character)
         character == '{' or character == '}' or
         character == ':'
     then
-        return
+        
     elseif character == '\n' or character == '\r' then
         frog:newline()
         return
@@ -102,6 +101,7 @@ function lexer:create(character)
         })
     else
         frog:throw(
+            self.token,
             string.format('Unexpected character "%s"', character),
             'Maybe removing the character will solve the issue.'
         )

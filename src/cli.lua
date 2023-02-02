@@ -99,10 +99,10 @@ return function(args)
             :print('  --no-color            Disable colors in output')
             :print('  --no-ansi             Disable ANSI escape codes in output\n')
             :print('Compiler:')
-            :print('  -o <file>             Output to <file>')
+            :print('  -o                    Output to <file>')
             :print('  -P, --pass <pass>     Halt and output at <tokens, ast, symbols, intermediate, codegen>')
-            :print('  -f <format>           Set output format to <elf, pe>')
-            :print('  -t <target>           Set output target to <x64, x86, arm, aarch64>')
+            :print('  -f, --format <format> Set output format to <elf, pe>')
+            :print('  -t, --target <target> Set output target to <x64, x86, arm, aarch64>')
         os.exit(0)
     elseif flags.v then
         frog:print(
