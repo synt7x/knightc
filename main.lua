@@ -5,6 +5,8 @@ local lexer = require('src/frontend/lexer')
 local parser = require('src/frontend/parser')
 local symbols = require('src/frontend/symbols')
 
+local intermediate = require('src/backend/intermediate')
+
 local cli = require('src/cli')
 local flags, inputs = cli(arg)
 
@@ -31,8 +33,11 @@ for i, name in ipairs(inputs) do
         local ast = parser.new(flags, tokens, comments)
         frog:dump('ast', ast)
 
-        local symboltable = symbols.new(ast)
-        frog:dump('symboltable', symboltable)
+        local symbols = symbols.new(ast)
+        frog:dump('symbols', symbols)
+
+        local ir = intermediate.new(flags, ast, symbols)
+        frog:dump('ir', ir)
     else
         frog:croak(
             string.format(
