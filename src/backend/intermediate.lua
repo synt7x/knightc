@@ -78,35 +78,38 @@ function intermediate:condition(node, register)
 end
 
 function intermediate:branch(node, store)
+    local root = #self.tree + 1
     local register = self:getRegister()
     table.insert(self.tree, self:condition(node.condition, register))
-    local position = #self.tree + 1
+
+    local condition = #self.tree + 1
 
     table.insert(self.tree, {
         type = 'catch'
     })
 
+    local position = #self.tree
 
     table.insert(self.tree, {
         type = 'body'
     })
 
-    local body = #self.tree + 1
 
-    table.insert(self.tree, position, {
+    table.insert(self.tree, condition, {
         type = 'je',
         right = { type = 'constant', index = 1 },
         left = { type = 'register', register = register },
-        position = body
+        position = #self.tree + 1 - root
     })
 
-    table.insert(self.tree, body, {
+    table.insert(self.tree, position + 2, {
         type = 'j',
-        position = #self.tree + 2
+        position = #self.tree - root - 1
     })
 end
 
 function intermediate:conditionloop(node)
+    local root = #self.tree + 1
     local body = #self.tree + 2
     
     self:expression(node.body)
@@ -119,12 +122,12 @@ function intermediate:conditionloop(node)
         type = 'je',
         right = { type = 'constant', index = 1 },
         left = { type = 'register', register = register },
-        position = body
+        position = root - #self.tree - 1
     })
 
     table.insert(self.tree, body - 1, {
         type = 'j',
-        position = condition
+        position = condition - root
     })
 end
 
