@@ -39,7 +39,7 @@ expression = function(state)
     end
 
     frog:throw(
-        state.token,
+        state.token or state.tokens[state.index - 1],
         'Expected an expression here',
         'Maybe try adding the proper amount of arguments.'
     )

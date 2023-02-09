@@ -45,9 +45,9 @@ end
 function frog:throw(token, error, hint)
     self
         :croak('Error: ' .. error)
-        :croak('| ' .. self.lines[token.position[1] + 1])
+        :croak('| ' .. self.lines[token.position[1] + 1]:gsub('\t', ' '))
 
-    self:croak('| ' .. string.rep('-', token.position[2]) .. string.rep('^', token.characters and #token.characters or 1))
+    self:croak('| ' .. string.rep(' ', token.position[2]) .. string.rep('^', token.characters and #token.characters or 1))
     self:croak('Help: ' .. hint .. '\n')
 end
 

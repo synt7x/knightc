@@ -4,3 +4,5 @@ examples
 *.out.lua
 *.out.json
 *.out
+*.o
+*.asm

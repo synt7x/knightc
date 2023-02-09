@@ -72,9 +72,6 @@ function symbols:expression(node, parent)
         self:expression(node.catch, node)
     elseif node.type == 'identifier' then
         self:reference(parent, node)
-    else
-        print(parent.type)
-        print(node.type)
     end
 end
 

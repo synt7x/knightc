@@ -1,27 +1,66 @@
+; = fizzbuzz BLOCK
+	; = n 0
+	: WHILE < n max
+		; = n + n 1
+
+		: OUTPUT
+			: IF ! (% n 15) "FizzBuzz"
+			: IF ! (% n 5)  "Fizz"
+			: IF ! (% n 3)  "Buzz"
+			                n
+
+; = max 100
+: CALL fizzbuzz
+
+
 {
-    format: "PE",
-    target: "x64",
-    import: [
-        "OUTPUT",
-        "EXIT",
-    ],
-    body: [
-        {
-            type: 'call',
-            value: standard@OUTPUT
-            arguments: [
-                constants@1
-            ]
-        },
-        {
-            type: 'call',
-            value: standard@EXIT,
-            arguments: [
-                0
-            ]
-        }
-    ],
-    constants: [
-        "Hello world!"
-    ]
+    mov reg1, @1
+    mov reg2, 100
+    call reg1
+
+
+    1:
+        mov reg3, 0
+    2:
+        cmp reg2, reg3
+        jl 3
+
+        inc reg3
+        mov reg4, reg3
+
+        mov reg5, reg4
+        mod reg5, 15
+        not reg5
+
+        cmp reg5, 0
+        je 4
+
+        output const@1
+        j 7
+    4:
+        mov reg5, reg4
+        mod reg5, 5
+        not reg5
+
+        cmp reg5, 0
+        je 5
+
+        output const@2
+        j 7
+    5:
+        mov reg5, reg4
+        mod reg5, 3
+        not reg5
+
+        cmp reg5, 0
+        je 6
+
+        output const@3
+        j 7
+    6:
+        output reg4
+    7:
+        j 2
+    3:
+        ret
 }

@@ -150,6 +150,7 @@ function lexer:continue(character)
         if character ~= '\n' then
             self.token.characters = self.token.characters .. character
         else
+            frog:newline()
             table.insert(self.comments, self.token)
             self.token = {}
         end

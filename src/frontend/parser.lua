@@ -90,14 +90,26 @@ function parser:expect(tokenType, tokenString)
 	end
 
     if not self.token then
-        frog:croak('Expected ' .. tokenType .. ' but got EOF')
+        frog:throw(
+			self.tokens[self.index - 1],
+			'Expected ' .. tokenType .. ' but got EOF.',
+			'Add a ' .. tokenType .. ' to satisfy the parser.'
+		)
         os.exit(1)
     end
 
 	if tokenString then
-		frog:croak('Expected ' .. tokenType .. " '" .. tokenString .. "' but got " .. self.token.type .. " '" .. self.token.string .. "'")
+		frog:throw(
+			self.token,
+			'Expected ' .. tokenType .. ' "' .. tokenString .. '" but got ' .. self.token.type .. " '" .. self.token.string .. "'",
+			'Replace this with "' .. tokenString .. '"'
+		)
 	else
-		frog:croak('Expected ' .. tokenType .. ' but got ' .. self.token.type)
+		frog:throw(
+			self.token,
+			'Expected ' .. tokenType .. ' but got ' .. self.token.type,
+			'Use ' .. tokenType .. ' here instead of ' .. self.token.type
+		)
 	end
 
     while not self:accept(tokenType, tokenString) do
