@@ -5,6 +5,7 @@ local lexer = require('src/frontend/lexer')
 local parser = require('src/frontend/parser')
 local symbols = require('src/frontend/symbols')
 
+local inference = require('src/backend/inference')
 local intermediate = require('src/backend/intermediate')
 
 local cli = require('src/cli')
@@ -36,8 +37,8 @@ for i, name in ipairs(inputs) do
         local symbols = symbols.new(ast)
         frog:dump('symbols', symbols)
 
-        local ir = intermediate.new(flags, ast, symbols)
-        frog:dump('ir', ir)
+        local types = inference.new(ast, symbols)
+        frog:dump('types', types)
     else
         frog:croak(
             string.format(

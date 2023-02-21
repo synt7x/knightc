@@ -18,14 +18,14 @@ function intermediate.new(flags, ast, symbols)
     }
 
     self.symbols = symbols
-    self.register = 0
+    self.reg = 0
 
     self.tree = self.ir
     self.ancestory = {}
 	self.node = self.tree
 
     self:enter(self.tree, self.tree.body)
-    self:expression(ast.body)
+    self:expression(ast.body, self:getRegister())
     self:exit()
 
     table.insert(self.ir.body, {
@@ -53,13 +53,49 @@ function intermediate:exit()
 	self.node = ancestor[2]
 end
 
+function intermediate:isLiteral(node)
+    if node.type == 'number' or node.type == 'string' then
+        return true
+    end
+
+    return false
+end
+
+function intermediate:register(reg)
+    return {
+        type = 'register',
+        value = reg
+    }
+end
+
+function intermediate:constant(index)
+    return {
+        type = 'constant',
+        value = index
+    }
+end
+
+function intermediate:literal(node)
+    table.insert(self.ir.constants, node)
+
+    return #self.ir.constants
+end
+
+function intermediate:move(imm, reg)
+    table.insert(self.tree, {
+        type = 'move',
+        immediate = imm,
+        register = reg
+    })
+end
+
 function intermediate:getSymbol(identifier)
     return self.symbols[identifier.characters]
 end
 
 function intermediate:getRegister()
-    self.register = self.register + 1
-    return self.register
+    self.reg = self.reg + 1
+    return self.reg
 end
 
 function intermediate:assignment(node)
@@ -131,20 +167,46 @@ function intermediate:conditionloop(node)
     })
 end
 
-function intermediate:expression(node)
-    if node.type == 'sequence' then
-        self:expression(node.left)
-        self:expression(node.right)
-    elseif node.type == 'assignment' then
-        self:assignment(node)
-    elseif node.type == 'block' then
-        self:block(node)
-    elseif node.type == 'while' then
-        self:conditionloop(node)
-    elseif node.type == 'if' then
-        self:branch(node)
+function intermediate:add(node, register)
+    local literals = 0
+
+    local reg1 = 0
+    local reg2 = 0
+
+    if self:isLiteral(node.left) then
+        literals = literals + 1
+
+        local constant = self:literal(node.left)
+        self:move(self:constant(constant), self:register(self:getRegister()))
+        reg1 = self.reg
     else
-        print(node.type)
+        reg1 = self:getRegister()
+        self:expression(node.left, reg1)
+    end
+    
+    if self:isLiteral(node.right) then
+        literals = literals + 1
+
+        local constant = self:literal(node.right)
+        self:move(self:constant(constant), self:register(self:getRegister()))
+        reg2 = self.reg
+    else
+        reg2 = self:getRegister()
+        self:expression(node.right, reg2)
+    end
+
+    table.insert(self.tree, {
+        type = 'add',
+        reg1 = reg1,
+        reg2 = reg2
+    })
+
+    self:move(self:register(reg1), self:register(register))
+end
+
+function intermediate:expression(node, register)
+    if node.type == 'add' then
+        self:add(node, register)
     end
 end
 

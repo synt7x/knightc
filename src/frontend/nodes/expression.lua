@@ -9,24 +9,33 @@ binary = require(path .. 'binary')
 ternary = require(path .. 'ternary')
 quarternary = require(path .. 'quarternary')
 
+local function characteristics(node, token)
+    node.characters = token.characters
+    node.position = token.position
+
+    return node
+end
+
 expression = function(state)
+    local token = state.token
+
     local literal = literal(state)
     if literal then return literal end
 
     local nullary = nullary(state)
-    if nullary then return nullary end
+    if nullary then return characteristics(nullary, token) end
 
     local unary = unary(state)
-    if unary then return unary end
+    if unary then return characteristics(unary, token) end
 
     local binary = binary(state)
-    if binary then return binary end
+    if binary then return characteristics(binary, token) end
 
     local ternary = ternary(state)
-    if ternary then return ternary end
+    if ternary then return characteristics(ternary, token) end
 
     local quarternary = quarternary(state)
-    if quarternary then return quarternary end
+    if quarternary then return characteristics(quarternary, token) end
 
     if state.token then
         frog:throw(
