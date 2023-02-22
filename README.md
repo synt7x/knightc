@@ -11,6 +11,9 @@ This invokes knightc, and all arguments can directly follow the main command. Be
 
 * *-o \<file>* (default: *a.out*)
     * Specifies the file that the final compilation pass will output to. Can be either a relative or specific path.
+* *-O\<level>* (default: *1*)
+    * Specifies the optimiation level to use, with 1 being the least optimization, and 3 being the most optimized.
+        * 1, 2, 3
 * *-P, --pass \<pass>* (default: *codegen*)
     * Specifies which pass in compilation will be the final pass. Once that pass is reached, compilation stops and the output of that pass is placed in the output file.
         * tokens, ast, symbols, types, intermediate, codegen

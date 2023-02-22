@@ -4,6 +4,7 @@ local recommendation = require('lib/recommendation')
 
 local defaults = {
     -- String values
+    ['O'] = 1, -- Optimization level
     ['o'] = recommendation:output(), -- File to output to
     ['P'] = 'codegen', -- Halt and output at given pass
     ['f'] = recommendation:format(), -- Format of output (ELF, PE)
@@ -32,6 +33,17 @@ local function getflags(args)
                     flags['o'] = argument:sub(3, #argument)
                 else
                     last = 'o'
+                end
+            elseif char == 'O' then
+                if #argument > 2 then
+                    local level = argument:sub(3, #argument)
+                    if level == '1' then
+                        flags['O'] = 1
+                    elseif level == '2' then
+                        flags['O'] = 2
+                    elseif level == '3' then
+                        flags['O'] = 3
+                    end
                 end
             elseif char == 'v' or argument == '--version' then
                 flags['v'] = true
@@ -100,6 +112,7 @@ return function(args)
             :print('  --no-ansi             Disable ANSI escape codes in output\n')
             :print('Compiler:')
             :print('  -o                    Output to <file>')
+            :print('  -O<level>             Set optimization level to <1, 2, 3>')
             :print('  -P, --pass <pass>     Halt and output at <tokens, ast, symbols, intermediate, codegen>')
             :print('  -f, --format <format> Set output format to <elf, pe>')
             :print('  -t, --target <target> Set output target to <x64, x86, arm, aarch64>')
