@@ -62,7 +62,7 @@ function symbols:expression(node, parent)
     elseif node.name then
         self:assignment(node, node.name)
         self:expression(node.value, node)
-    elseif node.value then
+    elseif #node == 2 and node.value then
         self:expression(node.value, node)
     elseif node.type == 'block' then
         self:expression(node.body, node)
@@ -72,6 +72,15 @@ function symbols:expression(node, parent)
         self:expression(node.catch, node)
     elseif node.type == 'identifier' then
         self:reference(parent, node)
+    elseif node.type == 'get' then
+        self:expression(node.value, node)
+        self:expression(node.start, node)
+        self:expression(node.length, node)
+    elseif node.type == 'set' then
+        self:expression(node.value, node)
+        self:expression(node.start, node)
+        self:expression(node.length, node)
+        self:expression(node.predicate, node)
     end
 end
 

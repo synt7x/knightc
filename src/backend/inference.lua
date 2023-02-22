@@ -104,6 +104,63 @@ function inference:binary(node)
     end
 end
 
+function inference:unary(node)
+    local t1 = self:expression(node.value)
+    if node.type == 'length' then
+        if t1.type == 'block' then
+            frog:throw(
+                t1,
+                'The length (L) operator does not accept block statements as arguments.',
+                'Try replacing this token with a number in order to fulfill the argument types.'
+            )
+        else
+            add(node.types, 'number')
+        end
+    elseif node.type == 'exit' then
+        if t1.type == 'block' then
+            frog:throw(
+                t1,
+                'The exit (Q) operator does not accept block statements as arguments.',
+                'Try replacing this token with a number in order to fulfill the argument types.'
+            )
+        else
+            add(node.types, 'null')
+        end
+    elseif node.type == 'output' or node.type == 'dump' then
+        add(node.types, 'null')
+    elseif node.type == 'not' then
+        if t1.type == 'block' then
+            frog:throw(
+                t1,
+                'The not (!) operator does not accept block statements as arguments.',
+                'Try replacing this token with a number in order to fulfill the argument types.'
+            )
+        else
+            add(node.types, 'boolean')
+        end
+    elseif node.type == 'negate' then
+        if t1.type == 'block' then
+            frog:throw(
+                t1,
+                'The negate (~) operator does not accept block statements as arguments.',
+                'Try replacing this token with a number in order to fulfill the argument types.'
+            )
+        else
+            add(node.types, 'number')
+        end
+    elseif node.type == 'asci' then
+        if t1.type ~= 'number' and t1.type ~= 'string' then
+            frog:throw(
+                t1,
+                'The ASCII (A) operator expects a number or a string, and accepts no other types.',
+                'Since ASCII does not coerce its arguments, maybe try using a value that produces a string or integer.'
+            )
+        end
+    elseif node.type == 'box' then
+        add(node.types, 'list')
+    end
+end
+
 function inference:expression(node, parent)
     node.types = {}
 
@@ -118,22 +175,26 @@ function inference:expression(node, parent)
 
     if node.left then
         self:binary(node)
+    elseif node.type == 'assignment' then
+        self:expression(node.value)
     elseif node.type == 'while' then
         self:expression(node.condition)
         self:expression(node.body)
         add(node.types, 'null')
     elseif node.name then
-       
         self:expression(node.value, node)
-    elseif node.value then
-        self:expression(node.value, node)
+    elseif not node.length and node.value then
+        self:unary(node)
     elseif node.type == 'block' then
         self:expression(node.body, node)
         add(node.types, 'block')
     elseif node.type == 'if' then
         self:expression(node.condition, node)
-        self:expression(node.body, node)
-        self:expression(node.catch, node)
+
+        local e1 = self:expression(node.body, node)
+        local e2 = self:expression(node.catch, node)
+        add(node.types, e1.types)
+        add(node.types, e2.types)
     elseif node.type == 'identifier' then
         --self:reference(parent, node)
     end
