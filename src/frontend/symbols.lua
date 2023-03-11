@@ -62,7 +62,7 @@ function symbols:expression(node, parent)
     elseif node.name then
         self:assignment(node, node.name)
         self:expression(node.value, node)
-    elseif #node == 2 and node.value then
+    elseif not node.start and node.value then
         self:expression(node.value, node)
     elseif node.type == 'block' then
         self:expression(node.body, node)

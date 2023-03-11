@@ -47,6 +47,10 @@ expression = function(state)
         os.exit(1)
     end
 
+    if not state.token and not state.tokens[state.index - 1] then
+        os.exit(0)
+    end
+
     frog:throw(
         state.token or state.tokens[state.index - 1],
         'Expected an expression here',

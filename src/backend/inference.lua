@@ -1,5 +1,6 @@
 local inference = {}
 local frog = require('lib/frog')
+local json = require('lib/json')
 
 function inference.new(ast, symbols)
     local self = {}
@@ -10,17 +11,24 @@ function inference.new(ast, symbols)
     self.symbols = symbols
     self:walk(ast)
 
-    return ast
+    return ast, symbols
 end
 
 local function find(node, search)
-    for key, value in pairs(node) do
-        if key == 'type' and value == search then
-            return node
-        elseif type(value) == 'table' then
+    local child = false
+    for i, value in pairs(node) do
+        if type(value) == 'table' then
             local result = find(value, search)
-            if result then return result end
+            if result then
+                child = result
+            end
         end
+    end
+
+    if node.types and node.types[search] and not child then
+        return node
+    elseif child then
+        return child
     end
 
     return false
@@ -39,6 +47,12 @@ local function add(array, node)
     return array
 end
 
+function inference:getReference(name)
+    local reference = self.symbols[name] or {}
+    reference.types = reference.types or {}
+    return reference
+end
+
 function inference:binary(node)
     local t1 = self:expression(node.left, node)
     local t2 = self:expression(node.right, node)
@@ -51,9 +65,9 @@ function inference:binary(node)
                 t1,
                 'The ' .. node.type .. ' (' .. (node.type == 'add' and '+' or '*') ..
                 ') operator expects a number, string, or list as its first argument.',
-                'Maybe change this to a number'
+                'Maybe change this to a number.'
             )
-        end
+        end   
     elseif node.type == 'subtract' or node.type == 'divide' or node.type == 'mod' then
         if t1.types.number then
             add(node.types, 'number')
@@ -61,7 +75,7 @@ function inference:binary(node)
             frog:throw(
                 t1,
                 'The ' .. node.type .. ' (' .. (node.type == 'mod' and '%' or node.type == 'divide' and '/' or '-') ..
-                ') operator expects a number as its first argument.'
+                ') operator expects a number as its first argument.', 'Maybe change this to a number.'
             )
         end
     elseif node.type == 'power' then
@@ -75,14 +89,14 @@ function inference:binary(node)
             )
         end
     elseif node.type == 'greater' or node.type == 'less' then
-        if node.types.number or node.types.boolean or node.types.string or node.types.list then
+        if t1.types.number or t1.types.boolean or t1.types.string or t1.types.list then
             add(node.types, 'boolean')
         else
             frog:throw(
                 t1,
                 'The ' .. node.type .. ' (' .. (node.type == 'less' and '<' or '>') ..
                 ') operator expects a number, boolean, string, or list as its first argument.',
-                'Maybe change this to a number'
+                'Maybe change this to a number, boolean, string, or a list.'
             )
         end
     elseif node.type == 'equals' then
@@ -129,7 +143,7 @@ function inference:unary(node)
     elseif node.type == 'output' or node.type == 'dump' then
         add(node.types, 'null')
     elseif node.type == 'not' then
-        if t1.type == 'block' then
+        if t1.types.block then
             frog:throw(
                 t1,
                 'The not (!) operator does not accept block statements as arguments.',
@@ -139,7 +153,7 @@ function inference:unary(node)
             add(node.types, 'boolean')
         end
     elseif node.type == 'negate' then
-        if t1.type == 'block' then
+        if t1.types.block then
             frog:throw(
                 t1,
                 'The negate (~) operator does not accept block statements as arguments.',
@@ -149,11 +163,20 @@ function inference:unary(node)
             add(node.types, 'number')
         end
     elseif node.type == 'asci' then
-        if t1.type ~= 'number' and t1.type ~= 'string' then
+        for i, v in ipairs(node.types) do print(v) end
+        if not t1.types.number and not t1.type.string then
             frog:throw(
                 t1,
                 'The ASCII (A) operator expects a number or a string, and accepts no other types.',
                 'Since ASCII does not coerce its arguments, maybe try using a value that produces a string or integer.'
+            )
+        end
+    elseif node.type == 'call' then
+        if not t1.types.block then
+            frog:throw(
+                t1,
+                'Called value will never be a block.',
+                'Try replacing this value with a block or variable that contains a block.'
             )
         end
     elseif node.type == 'box' then
@@ -176,7 +199,9 @@ function inference:expression(node, parent)
     if node.left then
         self:binary(node)
     elseif node.type == 'assignment' then
-        self:expression(node.value)
+        local t1 = self:expression(node.value)
+        add(self:getReference(node.name.characters).types, t1.types)
+        add(node.types, t1.types)
     elseif node.type == 'while' then
         self:expression(node.condition)
         self:expression(node.body)
@@ -196,7 +221,7 @@ function inference:expression(node, parent)
         add(node.types, e1.types)
         add(node.types, e2.types)
     elseif node.type == 'identifier' then
-        --self:reference(parent, node)
+        add(node.types, self:getReference(node.characters).types)
     end
 
     return node
