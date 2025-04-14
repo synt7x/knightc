@@ -6,6 +6,4 @@ examples
 *.out
 *.o
 *.asm
-
-# internal tools
-src/backend/iasm.lua
+*.exe
