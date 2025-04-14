@@ -6,6 +6,12 @@ local lexer = {
         ['%'] = '%', ['^'] = '^', ['<'] = '<', ['>'] = '>',
         ['?'] = '?', ['&'] = '&', ['|'] = '|', [';'] = ';',
         ['='] = '=', ['@'] = '@', ['~'] = '~'
+    },
+    functions = {
+        ['T'] = 'TRUE', ['F'] = 'FALSE', ['N'] = 'NULL', ['P'] = 'PROMPT',
+        ['R'] = 'RANDOM', ['B'] = 'BLOCK', ['C'] = 'CALL', ['Q'] = 'QUIT',
+        ['D'] = 'DUMP', ['O'] = 'OUTPUT', ['L'] = 'LENGTH', ['A'] = 'ASCII',
+        ['W'] = 'WHILE', ['I'] = 'IF', ['G'] = 'GET', ['S'] = 'SET'
     }
 }
 
@@ -127,7 +133,7 @@ function lexer:continue(character)
         if code >= 65 and code <= 90 or character == '_' then
             self.token.characters = self.token.characters .. character
         else
-            self.token.type = self.token.characters:sub(1, 1)
+            self.token.type = lexer.functions[self.token.characters:sub(1, 1)]
             table.insert(self.tokens, self.token)
             return self:create(character)
         end

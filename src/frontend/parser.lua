@@ -2,9 +2,8 @@ local config = require('config')
 local frog = require('lib/frog')
 local json = require('lib/json')
 
-local program = require('src/frontend/nodes/expression')
-
 local parser = {}
+local tree = require('src/frontend/tree')
 
 function parser.new(flags, tokens, comments)
 	local self = {}
@@ -24,7 +23,7 @@ function parser.new(flags, tokens, comments)
     self.token = self.tokens[self.index]
 	self.ancestory = {}
 	self.node = self.tree
-	self.node.body = program(self)
+	self.node.body = tree(self)
 
 	if self.token then
 		frog:throw(
@@ -124,6 +123,7 @@ function parser:enter(node, body)
 		self.tree,
 		self.node
 	})
+
 	self.tree = body
 	self.node = node
 end
@@ -133,5 +133,25 @@ function parser:exit()
 	self.tree = ancestor[1]
 	self.node = ancestor[2]
 end
+
+parser.traversal = {
+    binary = {
+        ['add'] = '+', ['subtract'] = '-', ['multiply'] = '*', ['divide'] = '/',
+        ['expr'] = ';', ['exact'] = '?', ['and'] = '&', ['or'] = '|',
+        ['less'] = '<', ['greater'] = '>', ['modulus'] = '%', ['exponent'] = '^'
+    },
+
+    unary = {
+        ['quit'] = 'Q', ['output'] = 'O', ['dump'] = 'D',
+        ['length'] = 'L', ['not'] = '!', ['prime'] = '[',
+        ['ultimate'] = ']', ['box'] = ',', ['ascii'] = 'A',
+        ['negative'] = '~'
+    },
+
+    literal = {
+        ['number'] = true, ['string'] = true, ['array'] = true,
+        ['boolean'] = true, ['null'] = true
+    }
+}
 
 return parser

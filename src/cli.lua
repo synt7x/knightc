@@ -15,6 +15,10 @@ local defaults = {
     ['h'] = false, -- Display help message
     ['q'] = false, -- Silent mode
     ['Q'] = false, -- Quiet mode
+    ['C'] = false, -- Cat mode
+
+    ['no-color'] = false, -- Disable colors in output
+    ['no-ansi'] = false, -- Disable ANSI escape codes in output
 }
 
 local function getflags(args)
@@ -53,6 +57,8 @@ local function getflags(args)
                 flags['Q'] = true
             elseif char == 'q' or argument == '--quiet' then
                 flags['q'] = true
+            elseif char == 'C' or argument == '--cat' then
+                flags['C'] = true 
             elseif char == 'P' or argument == '--pass' then
                 if char == 'P' and #argument > 2 then
                     flags['P'] = argument:sub(3, #argument)
@@ -71,6 +77,10 @@ local function getflags(args)
                 else
                     last = 't'
                 end
+            elseif argument == '-no-color' or argument == '--no-color' then
+                flags['no-color'] = true
+            elseif argument == '-no-ansi' or argument == '--no-ansi' then
+                flags['no-ansi'] = true
             else
                 flags[argument] = true
             end
@@ -118,15 +128,42 @@ return function(args)
             :print('  -t, --target <target> Set output target to <x64, x86, arm, aarch64>')
         os.exit(0)
     elseif flags.v then
-        frog:print(
-            string.format(
-                '%s v%s (%s)',
-                config.name,
-                config.version,
-                config.branch
-            )
+        frog:printf(
+            '%s v%s (%s)',
+            config.name,
+            config.version,
+            config.branch
         )
+
+        frog:printf(
+            '%s => %s targeting %s-%s:%s',
+            #inputs > 0 and table.concat(inputs, ', ') or '(none)', flags.o, flags.t, flags.f,
+            flags.P
+        )
+
         os.exit(0)
+    elseif flags.C then
+        for i = 1, #inputs do
+            local file = io.open(inputs[i], 'r')
+
+            if not file then
+                file = io.open(inputs[i] .. '.kn', 'r')
+            end
+
+            if file then
+                local text = file:read('*a')
+                print(require('lib/highlight')(text, flags))
+
+                file:close()
+            else
+                frog:croak(
+                    string.format(
+                        'Unable to locate file "%s" (tried %s and %s)',
+                        inputs[i], inputs[i], inputs[i] .. '.kn'
+                    )
+                )
+            end
+        end
     elseif #inputs == 0 then
         frog:print(
             string.format(

@@ -1,12 +1,27 @@
 local frog = {}
 local json = require('lib/json')
+local highlight = require('lib/highlight')
 
-frog.line = 0
-frog.char = 0
+frog.line = 1
+frog.char = 1
 frog.lines = {}
 frog.options = {
     ['q'] = false,
     ['Q'] = false,
+    ['no-color'] = false,
+    ['no-ansi'] = false
+}
+
+local colors = {
+    red = '\27[31m',
+    green = '\27[32m',
+    yellow = '\27[33m',
+    blue = '\27[34m',
+    magenta = '\27[35m',
+    cyan = '\27[36m',
+    white = '\27[37m',
+    reset = '\27[0m',
+    grey = '\27[90m',
 }
 
 function frog:setOptions(options)
@@ -22,7 +37,7 @@ function frog:getLines()
 end
 
 function frog:newline()
-    self.char = 0
+    self.char = 1
     self.line = self.line + 1
 end
 
@@ -42,15 +57,28 @@ function frog:croak(message)
     return self
 end
 
-function frog:throw(token, error, hint)
-    self
-        :croak('Error: ' .. error)
-        :croak('| ' .. self.lines[token.position[1] + 1]:gsub('\t', ' '))
+function frog:colorize(color)
+    if self.options['no-color'] or self.options['no-ansi'] then
+        return
+    end
 
-    self:croak(
-        '| ' .. string.rep(' ', token.position[2]) .. string.rep('^', token.type == 'string'
-        and #token.characters + 2 or token.characters and #token.characters or 1)
-    )
+    return color
+end
+
+function frog:throw(token, error, hint)
+    self:croak(self:colorize(colors.red) .. 'Error' .. self:colorize(colors.reset) .. ': ' .. error)
+
+    if token and self.lines[token.position[1]] then
+        local line = self.lines[token.position[1]]:gsub('\t', ' ')
+        self:croak('| ' .. highlight(line, self.options))
+            :croak(
+                '| ' .. string.rep(' ', token.position[2] - 1) .. self:colorize(colors.grey)
+                .. string.rep('^', token.type == 'string'
+                and #token.characters + 2 or token.characters and #token.characters or 1)
+                .. self:colorize(colors.reset)
+            )
+    end
+
     self:croak('Help: ' .. hint .. '\n')
 end
 

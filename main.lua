@@ -4,18 +4,10 @@ local json = require('lib/json')
 local lexer = require('src/frontend/lexer')
 local parser = require('src/frontend/parser')
 local symbols = require('src/frontend/symbols')
-
-local inference = require('src/backend/inference')
-local intermediate = require('src/backend/intermediate')
+local typecheck = require('src/frontend/typecheck')
 
 local cli = require('src/cli')
 local flags, inputs = cli(arg)
-
-frog:printf(
-    '%s => %s @ %s-%s:%s',
-    table.concat(inputs, ', '), flags.o, flags.t, flags.f,
-    flags.P
-)
 
 for i, name in ipairs(inputs) do
     local file = io.open(name, 'r')
@@ -26,19 +18,19 @@ for i, name in ipairs(inputs) do
 
     if file then
         local text = file:read('*a')
-        file:close()
 
+        file:close()
         local tokens, comments = lexer.new(text)
         frog:dump('tokens', tokens)
-
+    
         local ast = parser.new(flags, tokens, comments)
         frog:dump('ast', ast)
 
         local symbols = symbols.new(ast)
         frog:dump('symbols', symbols)
 
-        local types = inference.new(ast, symbols)
-        frog:dump('types', types)
+        typecheck.new(symbols, ast)
+        frog:dump('types', ast)
     else
         frog:croak(
             string.format(
