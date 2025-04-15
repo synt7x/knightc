@@ -2,6 +2,7 @@ local frog = {}
 local json = require('lib/json')
 local highlight = require('lib/highlight')
 
+frog.errors = 0
 frog.line = 1
 frog.char = 1
 frog.lines = {}
@@ -59,27 +60,43 @@ end
 
 function frog:colorize(color)
     if self.options['no-color'] or self.options['no-ansi'] then
-        return
+        return ''
     end
 
     return color
 end
 
-function frog:throw(token, error, hint)
-    self:croak(self:colorize(colors.red) .. 'Error' .. self:colorize(colors.reset) .. ': ' .. error)
+function frog:throw(token, error, hint, type)
+    if frog.errors > 0 then
+        io.write('\n')
+    end
+
+    self:croak(self:colorize(colors.red) .. (type or 'Error') .. self:colorize(colors.reset) .. ': ' .. error)
 
     if token and self.lines[token.position[1]] then
         local line = self.lines[token.position[1]]:gsub('\t', ' ')
-        self:croak('| ' .. highlight(line, self.options))
+        
+        if self.lines[token.position[1] - 1] then
+            local line = self.lines[token.position[1] - 1]:gsub('\t', ' ')
+            self:croak(self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset) .. highlight(line, self.options))
+        end
+
+        self:croak(self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset) .. highlight(line, self.options))
             :croak(
-                '| ' .. string.rep(' ', token.position[2] - 1) .. self:colorize(colors.grey)
+                self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset)
+                .. string.rep(' ', token.position[2] - 1) .. self:colorize(colors.grey)
                 .. string.rep('^', token.type == 'string'
                 and #token.characters + 2 or token.characters and #token.characters or 1)
                 .. self:colorize(colors.reset)
             )
+        self:croak(
+            self:colorize(colors.grey) .. '> ' .. self:colorize(colors.reset) ..
+            self.file .. ':' .. token.position[1] .. ':' .. token.position[2]
+        )
     end
 
-    self:croak('Help: ' .. hint .. '\n')
+    self:croak(self:colorize(colors.blue) .. 'Help: ' .. self:colorize(colors.reset) .. hint)
+    frog.errors = frog.errors + 1
 end
 
 function frog:dump(stage, object)
@@ -89,7 +106,7 @@ function frog:dump(stage, object)
         if file then
             file:write(json(object))
         else
-            self:error('Could not open file: ' .. self.opions['o'])
+            self:error('Could not open file: ' .. self.options['o'])
         end
 
         os.exit(0)

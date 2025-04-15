@@ -46,7 +46,7 @@ function lexer.new(input)
             table.insert(self.comments, self.token)
         else
             if self.token.type == 'reserved' then
-                self.token.type = self.token.characters:sub(1, 1)
+                self.token.type = self.functions[self.token.characters:sub(1, 1)]
             end
 
             table.insert(self.tokens, self.token)
@@ -67,7 +67,7 @@ end
 function lexer:create(character)
     local code = string.byte(character)
     self.token = {
-        position = { frog.line, frog.char }
+        position = { frog.line, frog.char, file = frog.file }
     }
 
     if 
@@ -76,8 +76,9 @@ function lexer:create(character)
         character == '{' or character == '}' or
         character == ':'
     then
-        
-    elseif character == '\n' or character == '\r' then
+        frog:character()
+        return
+    elseif character == '\n' then
         frog:newline()
         return
     elseif
@@ -109,7 +110,7 @@ function lexer:create(character)
         frog:throw(
             self.token,
             string.format('Unexpected character "%s"', character),
-            'Maybe removing the character will solve the issue.'
+            'Try removing this token'
         )
     end
 
@@ -147,6 +148,11 @@ function lexer:continue(character)
     elseif self.token.type == 'string' then
         if character ~= self.token.delimiter then
             self.token.characters = self.token.characters .. character
+
+            if character == '\n' then
+                frog:newline()
+                return
+            end
         else
             self.token.delimiter = nil
             table.insert(self.tokens, self.token)
@@ -159,6 +165,7 @@ function lexer:continue(character)
             frog:newline()
             table.insert(self.comments, self.token)
             self.token = {}
+            return
         end
     end
 

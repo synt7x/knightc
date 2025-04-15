@@ -165,4 +165,4 @@ function interpreter:run()
     end
 end
 
-interpreter.new(bytecode.examples.fib, {}, { 30 } )
+interpreter.new(bytecode.examples.fib, {}, { 10 } )

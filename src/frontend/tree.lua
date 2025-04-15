@@ -8,6 +8,18 @@ end
 function expression(state)
     local token = state.token
 
+    if not token then
+        if state.tokens[state.index - 1] then
+            local token = state.tokens[state.index - 1]
+            frog:throw(
+                token,
+                string.format('Expected an expression to follow "%s"', token.type),
+                'Add an expression following this token to satisfy the parser',
+                'Parser'
+            )
+        end
+    end
+
     local literal = literal(state)
     if literal then return tokenize(literal, token) end
 
@@ -26,8 +38,9 @@ function expression(state)
     if state.token then
         frog:throw(
             state.token,
-            "Unexpected token: " .. state.token.type .. " '" .. state.token.characters .. "'",
-            "Expected an expression, but got: " .. state.token.type .. " '" .. state.token.characters .. "'"
+            'Unexpected token: ' .. (state.token.type or '') .. ' "' .. state.token.characters .. '"',
+            'Expected an expression, but got: ' .. (state.token.type or '') .. ' "' .. state.token.characters .. '"',
+            'Parser'
         )
 
         os.exit(1)

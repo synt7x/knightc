@@ -29,8 +29,11 @@ function parser.new(flags, tokens, comments)
 		frog:throw(
 			self.token,
 			'Extraneous token following body',
-			'Maybe try removing this token'
+			'Try removing this token or inserting a ";" prior',
+			'Parser'
 		)
+
+		os.exit(1)
 	end
 
 	return self.tree
@@ -91,8 +94,8 @@ function parser:expect(tokenType, tokenString)
     if not self.token then
         frog:throw(
 			self.tokens[self.index - 1],
-			'Expected ' .. tokenType .. ' but got EOF.',
-			'Add a ' .. tokenType .. ' to satisfy the parser.'
+			'Expected ' .. tokenType .. ' but got EOF',
+			'Add a ' .. tokenType .. ' to satisfy the parser'
 		)
         os.exit(1)
     end

@@ -89,7 +89,7 @@ bytecode.examples.fib = {
     bytecode.LOADK, 2, 1,
     bytecode.LOADIMM, 3, 2,
     bytecode.PUSHR, 0,
-    bytecode.JMP, 6,
+    bytecode.JR, 1,
     bytecode.OUTPUT,
     bytecode.HALT,
 }

@@ -18,21 +18,17 @@ for i, name in ipairs(inputs) do
 
     if file then
         local text = file:read('*a')
-
         file:close()
+        frog.file = name
+
         local tokens, comments = lexer.new(text)
-        frog:dump('tokens', tokens)
-    
         local ast = parser.new(flags, tokens, comments)
-        frog:dump('ast', ast)
-
         local symbols = symbols.new(ast)
-        frog:dump('symbols', symbols)
-
         typecheck.new(symbols, ast)
-        for i, s in pairs(symbols) do
-            s.defs = nil
-        end
+
+        frog:dump('tokens', tokens)
+        frog:dump('ast', ast)
+        frog:dump('symbols', symbols)
         frog:dump('types', symbols)
     else
         frog:croak(

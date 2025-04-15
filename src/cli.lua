@@ -1,5 +1,6 @@
 local config = require('config')
 local frog = require('lib/frog')
+local highlight = require('lib/highlight')
 local recommendation = require('lib/recommendation')
 
 local defaults = {
@@ -152,9 +153,11 @@ return function(args)
 
             if file then
                 local text = file:read('*a')
-                print(require('lib/highlight')(text, flags))
-
                 file:close()
+
+                if not flags.Q and not flags.q then
+                    print(highlight(text, flags))
+                end
             else
                 frog:croak(
                     string.format(
