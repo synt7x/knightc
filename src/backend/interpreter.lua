@@ -35,7 +35,7 @@ end
 
 function interpreter:jump(address)
     if address > #self.ir then
-        print("Jump out of bounds")
+        print("Jump out of bounds", address, #self.ir)
         return
     end
 
@@ -146,6 +146,21 @@ function interpreter:run()
             local value2 = self.registers[register2] or 0
 
             self:push(value1 - value2)
+        elseif instruction == bytecode.MOD then
+            local register1 = self:byte()
+            local register2 = self:byte()
+            local value1 = self.registers[register1] or 0
+            local value2 = self.registers[register2] or 0
+
+            self:push(value1 % value2)
+        elseif instruction == bytecode.NOT then
+            local value = self:pop()
+
+            if value then
+                self:push(0)
+            else
+                self:push(1)
+            end
         elseif instruction == bytecode.LT then
             local register1 = self:byte()
             local register2 = self:byte()
@@ -165,4 +180,6 @@ function interpreter:run()
     end
 end
 
-interpreter.new(bytecode.examples.fib, {}, { 10 } )
+--interpreter.new(bytecode.examples.fib, {}, { 20 } )
+--interpreter.new(bytecode.examples.fizzbuzz, {}, { "Fizz", "Buzz", "FizzBuzz", 15, 5, 3 } )
+interpreter.new(bytecode.examples.hello_world, {}, { "The Sky" } )

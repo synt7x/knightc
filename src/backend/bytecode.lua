@@ -94,4 +94,47 @@ bytecode.examples.fib = {
     bytecode.HALT,
 }
 
+bytecode.examples.fizzbuzz = {
+    bytecode.LOADIMM, 1, 1000, -- mov rax, 100
+    bytecode.LOADIMM, 2, 0, -- mov rbx, 0
+    bytecode.LOADIMM, 3, 1, -- mov rcx, 1
+    bytecode.LOADK, 7, 4,
+    bytecode.LOADK, 8, 5,
+    bytecode.LOADK, 9, 6,
+
+    -- WHILE BODY
+    bytecode.LT, 2, 1, -- (< rbx rax)
+    bytecode.JZ, 61,
+
+    bytecode.ADD, 2, 3, -- push (rbx + 1)
+    bytecode.POP, 2,
+
+    bytecode.MOD, 2, 7,
+    bytecode.JNZ, 38,
+    bytecode.PUSH, 3,
+    bytecode.JMP, 58,
+
+    bytecode.MOD, 2, 8,
+    bytecode.JNZ, 47,
+    bytecode.PUSH, 1,
+    bytecode.JMP, 58,
+
+    bytecode.MOD, 2, 9,
+    bytecode.JNZ, 56,
+    bytecode.PUSH, 2,
+    bytecode.JMP, 58,
+
+    bytecode.PUSHR, 2,
+    bytecode.OUTPUT,
+
+    bytecode.JMP, 19,
+    bytecode.HALT
+}
+
+bytecode.examples.hello_world = {
+    bytecode.PUSH, 1,
+    bytecode.OUTPUT,
+    bytecode.HALT
+}
+
 return bytecode

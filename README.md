@@ -4,10 +4,10 @@ Faithful[*](#differences) [Knight](https://github.com/knight-lang/knight-lang) o
 
 ## Usage
 
-To run knightc, you must atleast have [Lua 5.1](https://lua.org) installed. If you have Lua installed, you can run:
+To run knightc, you must atleast have [Lua 5.1](https://lua.org) or LuaJIT (recommended) installed. If you have Lua installed, you can run:
 
 ```sh
-lua main.lua
+luajit main.lua
 ```
 
 This invokes knightc, and all arguments can directly follow the main command. Below is a list of compiler options:
