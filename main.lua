@@ -30,7 +30,10 @@ for i, name in ipairs(inputs) do
         frog:dump('symbols', symbols)
 
         typecheck.new(symbols, ast)
-        frog:dump('types', ast)
+        for i, s in pairs(symbols) do
+            s.defs = nil
+        end
+        frog:dump('types', symbols)
     else
         frog:croak(
             string.format(
