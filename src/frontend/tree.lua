@@ -283,9 +283,12 @@ function binary(state)
 
         return node
     elseif state:accept('=') then
+        local name = state:expect('identifier')
+        tokenize(name, name)
+
         local node = {
             type = 'assignment',
-            name = state:expect('identifier'),
+            name = name,
             value = expression(state)
         }
 

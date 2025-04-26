@@ -32,7 +32,7 @@ function symbols:add(identifier, parent, deps)
         }
     end
 
-    if parent and parent.type == 'assignment' then
+    if parent and parent.type == 'assignment' and parent.name == identifier then
         table.insert(self.map[name].defs, parent)
     end
 
@@ -55,6 +55,7 @@ function symbols:add(identifier, parent, deps)
 end
 
 function symbols:reverse()
+    local errors = 0
     for name, symbol in pairs(self.map) do
         for dep, tag in pairs(symbol.deps) do
             local reference = self.map[dep]
@@ -68,9 +69,15 @@ function symbols:reverse()
                 'Try checking the spelling or removing this identifier',
                 'Symbols'
             )
+
+            errors = errors + 1
         end
 
         symbol.uses = nil
+    end
+
+    if errors > 0 then
+        os.exit(1)
     end
 end
 
@@ -101,10 +108,9 @@ function symbols:deps(ast)
             ast
         })
     elseif ast.type == 'assignment' then
-        local val = self:deps(ast.value)
         return self:collect(
             self:deps(ast.name),
-            val
+            self:deps(ast.value)
         )
     elseif traversal.binary[ast.type] then
         return self:collect(
@@ -157,6 +163,7 @@ function symbols:walk(ast, parent)
     elseif ast.type == 'identifier' then
         self:add(ast, parent)
     elseif ast.type == 'assignment' then
+        self.symbol = ast.name.characters
         self:add(
             ast.name, ast,
             self:deps(ast.value)

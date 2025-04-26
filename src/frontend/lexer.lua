@@ -104,7 +104,7 @@ function lexer:create(character)
         table.insert(self.tokens, {
             type = self.symbols[character],
             characters = character,
-            position = { frog.line, frog.char }
+            position = { frog.line, frog.char, file = frog.file }
         })
     else
         frog:throw(

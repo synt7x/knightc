@@ -33,6 +33,11 @@ for i, name in ipairs(inputs) do
         frog:dump('symbols', symbols)
 
         typecheck.new(symbols, ast)
+
+        for i, symbol in pairs(symbols) do
+            symbol.defs = nil
+        end
+
         frog:dump('types/ast', ast)
         frog:dump('types/symbols', symbols)
 

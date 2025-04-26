@@ -23,7 +23,13 @@ function typecheck.new(symbols, ast)
     return self:check(ast.body)
 end
 
-function typecheck:join(type1, type2)
+function typecheck:join(type1, type2, depth)
+    depth = depth or 0
+
+    if depth > 10 then
+        return type1
+    end
+
     local overlap = {}
     for i, type in ipairs(type1 or {}) do overlap[type] = type end
     for i, type in ipairs(type2 or {}) do overlap[type] = type end
@@ -34,7 +40,11 @@ function typecheck:join(type1, type2)
     end
 
     if type1.block and type2.block then
-        union.block = self:join(type1.block, type2.block)
+        if type1.block == type2.block then
+            union.block = type1.block -- Avoid infinite recursion
+        else
+            union.block = self:join(type1.block, type2.block, depth + 1)
+        end
     elseif type1.block then
         union.block = type1.block
     elseif type2.block then
@@ -42,7 +52,11 @@ function typecheck:join(type1, type2)
     end
 
     if type1.list and type2.list then
-        union.list = self:join(type1.list, type2.list)
+        if type1.list == type2.list then
+            union.list = type1.list -- Avoid infinite recursion
+        else
+            union.list = self:join(type1.list, type2.list, depth + 1)
+        end
     elseif type1.list then
         union.list = type1.list
     elseif type2.list then
@@ -52,13 +66,33 @@ function typecheck:join(type1, type2)
     return union
 end
 
-function typecheck:equal(type1, type2)
+function typecheck:equal(type1, type2, depth)
+    depth = depth or 0
+
+    if depth > 10 then
+        return true
+    end
+
     if #type1 ~= #type2 then return false end
 
     local set = {}
     for _, t in ipairs(type1) do set[t] = true end
     for _, t in ipairs(type2) do
         if not set[t] then return false end
+    end
+
+    if type1.block and type2.block then
+        if type1.block == type2.block then return true end
+        if not self:equal(type1.block, type2.block, depth + 1) then return false end
+    elseif type1.block or type2.block then
+        return false
+    end
+
+    if type1.list and type2.list then
+        if type1.list == type2.list then return true end
+        if not self:equal(type1.list, type2.list, depth + 1) then return false end
+    elseif type1.list or type2.list then
+        return false
     end
 
     return true
@@ -112,47 +146,38 @@ function typecheck:contains(types, check)
 end
 
 function typecheck:work()
-    self.worklist = {}
-    self.unresolved = {}
-
+    local worklist = {}
+    local visited = {}
     for name, symbol in pairs(self.symbols) do
-        table.insert(self.worklist, name)
+        table.insert(worklist, name)
     end
 
-    while #self.worklist > 0 do
-        self.unresolved = false
+    while #worklist > 0 do
+        local name = table.remove(worklist)
+        if not visited[name] then
+            local symbol = self.symbols[name]
 
-        local name = table.remove(self.worklist)
-        local symbol = self.symbols[name]
-        
-        if not symbol.resolved then
+            self.unresolved = false
             self.symbol = symbol
+            
             local inferred = {}
-
-            for _, def in ipairs(symbol.defs) do
-                local type = self:infer(def.value, def)
+            for i, def in ipairs(symbol.defs) do
+                local type = self:infer(def.value)
                 inferred = self:join(inferred, type)
             end
 
-            self.unresolved = self.unresolved or #inferred == 0
-
-            if not self:equal(symbol.types, inferred) or self.unresolved then
+            if not self:equal(symbol.types, inferred) then
                 symbol.types = inferred
 
                 for dep, tag in pairs(symbol.revdeps) do
-                    local dependant = self.symbols[dep]
-                    if not dependant.resolved then
-                        table.insert(self.worklist, dep)
-                    end
+                    table.insert(worklist, dep)
                 end
-            else
-                symbol.resolved = true
             end
         end
     end
 end
 
-function typecheck:expect(ast, checked, expected)
+function typecheck:expect(ast, checked, expected, a)
     local contains = false
     local set = {}
 
@@ -165,7 +190,9 @@ function typecheck:expect(ast, checked, expected)
         frog:throw(
             ast.token,
             "Expected expression of type " .. json(expected) .. ' got ' .. json(checked),
-            "Replace with an expression of the expected type"
+            "Replace with an expression of the expected type",
+            'err',
+            a
         )
     end
 
@@ -179,6 +206,15 @@ function typecheck:recursive(ast)
 
     if ast.type == 'identifier' then
         local symbol = self.symbols[ast.characters]
+        if not symbol then
+            frog:throw(
+                ast.token,
+                string.format('Panic during type enforcement, unhandled identifier %s', ast.characters),
+                'Please report this as a bug in the issue tracker',
+                'Panic'
+            )
+        end
+
         local tag = symbol.tag
         -- Check if the identifier matches the current function being analyzed
         return tag == self.symbol.tag
@@ -190,6 +226,17 @@ function typecheck:recursive(ast)
     elseif ast.type == 'prime' then
         -- Check the unboxed value in the `prime` node
         return self:recursive(ast.argument)
+    elseif ast.type == 'ultimate' then
+        -- Check the unboxed value in the `ultimate` node
+        return self:recursive(ast.argument)
+    elseif ast.type == 'box' then
+        -- Check the unboxed value in the `box` node
+        return self:recursive(ast.argument)
+    elseif ast.type == 'get' then
+        return self:recursive(ast.argument)
+    elseif ast.type == 'assignment' then
+        -- Check the value being assigned
+        return self:recursive(ast.value)
     elseif traversal.unary[ast.type] then
         -- Check the argument of unary operations
         return self:recursive(ast.argument)
@@ -231,19 +278,13 @@ function typecheck:check(ast, parent)
     end
 
     if ast.type == 'call' then
-        -- TODO: Determine return types from BLOCK;
-        -- it's possible by descending the children
-        -- and searching through symbol defs
-        -- as well as unboxing provided BLOCK types.
-
-		-- ast.argument
         local name = ast.name
 		local types = self:check(name, ast)
-
         self:expect(
-			name.token,
+			name,
 			name.types,
-			self:type(self.types.block)
+			self:type(self.types.block),
+            ast
 		)
 
 		ast.types = types.block or { self.types.null }
@@ -502,6 +543,31 @@ function typecheck:check(ast, parent)
 
 		return self:apply(ast, self.types.number)
 	elseif ast.type == 'exponent' then
+        local ltypes = self:check(ast.left, ast)
+        self:expect(
+            ast.left,
+            ltypes,
+            self:type(self.types.number, self.types.list)
+        )
+
+        local is_number = self:has(ast.left, self.types.number)
+        local is_list = self:has(ast.left, self.types.list)
+
+        self:coerce(
+            ast.right,
+            self:check(ast.right, ast),
+            self:type(self.types.number, self.types.string)
+        )
+
+        if is_number and is_list then
+            ast.types = self:type(self.types.number, self.types.list)
+        elseif is_number then
+            ast.types = self:type(self.types.number)
+        elseif is_list then
+            ast.types = self:type(self.types.list)
+        end
+
+        return ast.types
 	elseif ast.type == 'less' then
         self:expect(
             ast.left,
@@ -556,6 +622,31 @@ function typecheck:check(ast, parent)
         )
 
         return self:apply(ast, self.types.boolean)
+    elseif ast.type == 'and' then
+        local ltypes = self:check(ast.left, ast)
+        local rtypes = self:check(ast.right, ast)
+
+        self:coerce(
+            ast.left,
+            ltypes,
+            self.types.unresolved
+        )
+
+        ast.types = self:join(ltypes, rtypes)
+
+        return ast.types
+    elseif ast.type == 'or' then
+        local ltypes = self:check(ast.left, ast)
+        local rtypes = self:check(ast.right, ast)
+
+        self:coerce(
+            ast.left,
+            ltypes,
+            self.types.unresolved
+        )
+
+        ast.types = self:join(ltypes, rtypes)
+        return ast.types
     elseif ast.type == 'expr' then
         self:check(ast.left, ast)
         ast.types = self:check(ast.right, ast)
@@ -566,7 +657,8 @@ function typecheck:check(ast, parent)
         local symbol = self.symbols[name]
 
         self:check(ast.name, ast)
-        return self:apply(ast, self.types.null)
+        ast.types = value
+        return value
     elseif ast.type == 'if' then
         self:check(ast.condition, ast)
         local type1 = self:check(ast.body, ast)
@@ -574,6 +666,62 @@ function typecheck:check(ast, parent)
 
         ast.types = self:join(type1, type2)
         return ast.types
+    elseif ast.type == 'get' then
+        local types = self:check(ast.argument, ast)
+
+        self:expect(
+            ast.argument,
+            types,
+            { self.types.list, self.types.string }
+        )
+
+        self:expect(
+            ast.start,
+            self:check(ast.start, ast),
+            { self.types.number }
+        )
+
+        self:expect(
+            ast.width,
+            self:check(ast.width, ast),
+            { self.types.number }
+        )
+
+        ast.types = types
+        return ast.types
+    elseif ast.type == 'set' then
+        local types = self:check(ast.argument, ast)
+
+        self:expect(
+            ast.argument,
+            types,
+            { self.types.list, self.types.string }
+        )
+
+        self:coerce(
+            ast.start,
+            self:check(ast.start, ast),
+            { self.types.number }
+        )
+
+        self:coerce(
+            ast.width,
+            self:check(ast.width, ast),
+            { self.types.number }
+        )
+
+        self:coerce(
+            ast.value,
+            self:check(ast.value, ast),
+            types
+        )
+
+        ast.types = types
+        return ast.types
+    elseif ast.type == 'while' then
+        self:check(ast.condition, ast)
+        self:check(ast.body, ast)
+        return self:apply(ast, self.types.null)
 	elseif ast.type == 'block' then
 		self:apply(ast, self.types.block)
 
@@ -596,9 +744,9 @@ function typecheck:check(ast, parent)
 
         ast.types = symbol.types
         return ast.types
-    elseif ast.type == 'number' then
+    elseif ast.type == 'number' or ast.type == 'random' then
         return self:apply(ast, self.types.number)
-    elseif ast.type == 'string' then
+    elseif ast.type == 'string' or ast.type == 'prompt' then
         return self:apply(ast, self.types.string)
     elseif ast.type == 'list' then
         self:apply(ast, self.types.list)
@@ -634,9 +782,116 @@ function typecheck:infer(ast, parent)
         os.exit(1)
     end
 
-    if traversal.binary[ast.type] then
-        self:infer(ast.left, ast)
+    if ast.type == 'add' then    
+        local ltypes = self:infer(ast.left, ast)
+        local rtypes = self:infer(ast.right, ast)
+
+		local is_number = self:contains(ltypes, self.types.number)
+		local is_string = self:contains(ltypes, self.types.string)
+		local is_list = self:contains(ltypes, self.types.list)
+
+		local types = {}
+
+		if is_number then
+			table.insert(types, self.types.number)
+		end
+
+		if is_string then
+			table.insert(types, self.types.string)
+		end
+
+        if is_list then
+            table.insert(types, self.types.list)
+        else
+            self:coerce(
+                ast.right,
+                rtypes,
+                types
+            )
+        end
+
+        if is_list then
+            types.list = ltypes.list or {}
+            types.list = self:join(types.list, rtypes)
+		end
+
+		return types
+    elseif ast.type == 'subtract' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.number)
+    elseif ast.type == 'multiply' then
+        local ltypes = self:infer(ast.left, ast)
+        local rtypes = self:infer(ast.right, ast)
+
+        local is_number = self:contains(ltypes, self.types.number)
+        local is_string = self:contains(ltypes, self.types.string)
+        local is_list = self:contains(ltypes, self.types.list)
+
+        local types = {}
+
+        if is_number then
+            table.insert(types, self.types.number)
+        end
+
+        if is_string then
+            table.insert(types, self.types.string)
+        end
+
+        if is_list then
+            table.insert(types, self.types.list)
+        end
+
+        return types
+    elseif ast.type == 'divide' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.number)
+    elseif ast.type == 'modulus' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.number)
+    elseif ast.type == 'exponent' then
+        local ltypes = self:infer(ast.left, ast)
+        self:infer(ast.right, ast)
+
+        local is_number = self:contains(ltypes, self.types.number)
+        local is_string = self:contains(ltypes, self.types.string)
+
+        if is_number and is_list then
+            return self:type(self.types.number, self.types.list)
+        elseif is_number then
+            return self:type(self.types.number)
+        elseif is_list then
+            return self:type(self.types.list)
+        end
+
+        return self:type(self.types.number, self.types.list)
+    elseif ast.type == 'and' then
+        local ltypes = self:infer(ast.left, ast)
+        local rtypes = self:infer(ast.right, ast)
+
+        return self:join(ltypes, rtypes)
+    elseif ast.type == 'or' then
+        local ltypes = self:infer(ast.left, ast)
+        local rtypes = self:infer(ast.right, ast)
+
+        return self:join(ltypes, rtypes)
+    elseif ast.type == 'expr' then
+        -- self:infer(ast.left, ast)
         return self:infer(ast.right, ast)
+    elseif ast.type == 'exact' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.boolean)
+    elseif ast.type == 'less' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.boolean)
+    elseif ast.type == 'greater' then
+        -- self:infer(ast.left, ast)
+        -- self:infer(ast.right, ast)
+        return self:type(self.types.boolean)
     elseif ast.type == 'output' then
         self:infer(ast.argument, ast)
         return self:type(self.types.null)
@@ -650,33 +905,67 @@ function typecheck:infer(ast, parent)
     elseif ast.type == 'box' then
         local lmeta = self:infer(ast.argument, ast)
         return self:meta(self:type(self.types.list), nil, lmeta)
-    elseif ast.type == 'prime' then
-        local meta = self:infer(ast.argument, ast)
-        return meta.list or {}
-    elseif ast.type == 'ultimate' then
-        local meta = self:infer(ast.argument, ast)
-        return meta.list or {}
-    elseif traversal.unary[ast.type] then
-        return self:infer(ast.argument, ast)
+    elseif ast.type == 'prime' or ast.type == 'ultimate' then
+        local types = self:infer(ast.argument, ast)
+
+		local is_string = self:contains(types, self.types.string)
+		local is_number = self:contains(types, self.types.number)
+        local is_list = self:contains(types, self.types.list)
+
+        local types = {}
+
+        if is_string then
+            types = self:join(types, { self.types.string })
+        end
+
+        if is_number then
+            types = self:join(types, { self.types.number })
+        end
+
+        if is_list then
+            types = self:join(types, types.list or { self.types.null })
+        end
+
+        if #types == 0 then
+            return self:type(self.types.string, self.types.number, self.types.list)
+        end
+
+        return types
+    elseif ast.type == 'ascii' then
+        local types = self:infer(ast.argument, ast)
+        if self:contains(types, self.types.string) and self:contains(types, self.types.number) then
+            return self:type(self.types.string, self.types.number)
+        elseif self:contains(types, self.types.string) then
+            return self:type(self.types.number)
+        end
+        return self:type(self.types.string)
+    elseif ast.type == 'length' then
+        self:infer(ast.argument, ast)
+        return self:type(self.types.number)
+    elseif ast.type == 'not' then
+        self:infer(ast.argument, ast)
+        return self:type(self.types.boolean)
+    elseif ast.type == 'negative' then
+        self:infer(ast.argument, ast)
+        return self:type(self.types.number)
+    elseif ast.type == 'quit' then
+        self:infer(ast.argument, ast)
+        return self:type(self.types.null)
     elseif ast.type == 'identifier' then
         local name = ast.characters
         local symbol = self.symbols[name]
+
         return symbol.types
     elseif ast.type == 'assignment' then
-        self:infer(ast.value, ast)
-        return self:type(self.types.null)
+        return self:infer(ast.value, ast)
     elseif ast.type == 'block' then
         local bmeta = self:infer(ast.body, ast)
-
         return self:meta(self:type(self.types.block), bmeta, nil)
     elseif ast.type == 'call' then
         local meta = self:infer(ast.name, ast)
-
         if self:recursive(ast.name) then
             self.unresolved = true
-            return {}
         end
-
         return meta.block or {}
     elseif ast.type == 'if' then
         self:infer(ast.condition, ast)
@@ -684,17 +973,26 @@ function typecheck:infer(ast, parent)
         local type2 = self:infer(ast.fallback, ast)
         return self:join(type1, type2)
     elseif ast.type == 'while' then
-        self:infer(ast.condition, ast)
-        return self:infer(ast.body, ast)
+        -- self:infer(ast.condition, ast)
+        -- self:infer(ast.body, ast)
+        return self:type(self.types.null)
     elseif ast.type == 'get' then
-        self:infer(ast.start, ast)
-        self:infer(ast.width, ast)
-        return self:infer(ast.argument, ast)
+        -- self:infer(ast.start, ast)
+        -- self:infer(ast.width, ast)
+        local types = self:infer(ast.argument, ast)
+        if #types == 0 then
+            return self:type(self.types.string, self.types.list)
+        end
+        return types 
     elseif ast.type == 'set' then
-        self:infer(ast.start, ast)
-        self:infer(ast.width, ast)
-        self:infer(ast.value, ast)
-		return self:infer(ast.argument, ast)
+        -- self:infer(ast.start, ast)
+        -- self:infer(ast.width, ast)
+        -- self:infer(ast.value, ast)
+		local types = self:infer(ast.argument, ast)
+        if #types == 0 then
+            return self:type(self.types.string, self.types.list)
+        end
+        return types 
     elseif ast.type == self.types.string then
         return self:type(self.types.string)
     elseif ast.type == self.types.number then
@@ -704,7 +1002,7 @@ function typecheck:infer(ast, parent)
     elseif ast.type == self.types.boolean then
         return self:type(self.types.boolean)
     elseif ast.type == self.types.list then
-        return self:type(self.types.list)
+        return self:meta(self:type(self.types.list), nil, {})
     else
         frog:throw(
             ast.token,

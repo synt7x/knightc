@@ -66,13 +66,12 @@ function frog:colorize(color)
     return color
 end
 
-function frog:throw(token, error, hint, type)
+function frog:throw(token, error, hint, type, a)
     if frog.errors > 0 then
         io.write('\n')
     end
 
     self:croak(self:colorize(type == 'Warn' and colors.yellow or colors.red) .. (type or 'Error') .. self:colorize(colors.reset) .. ': ' .. error)
-
     if token and self.lines[token.position[1]] then
         local line = self.lines[token.position[1]]:gsub('\t', ' ')
         
@@ -80,7 +79,7 @@ function frog:throw(token, error, hint, type)
             local line = self.lines[token.position[1] - 1]:gsub('\t', ' ')
             self:croak(self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset) .. highlight(line, self.options))
         end
-
+        
         self:croak(self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset) .. highlight(line, self.options))
             :croak(
                 self:colorize(colors.grey) .. '| '
