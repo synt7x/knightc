@@ -69,6 +69,8 @@ return function(line, options)
                 buffer = buffer .. peek
                 index = index + 1
                 peek = characters[index + 1]
+                if not peek then break end
+
                 code = string.byte(peek)
             end
 
@@ -77,6 +79,8 @@ return function(line, options)
         elseif literals[char] then
             buffer = buffer .. colors.green .. char
             peek = characters[index + 1]
+            if not peek then break end
+
             code = string.byte(peek)
 
             while code >= 65 and code <= 90 and index < #characters do

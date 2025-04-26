@@ -78,7 +78,7 @@ function literal(state)
         return node
     elseif state:accept('@') then
         local node = {
-            type = 'array',
+            type = 'list',
         }
 
         return node

@@ -71,7 +71,7 @@ function frog:throw(token, error, hint, type)
         io.write('\n')
     end
 
-    self:croak(self:colorize(colors.red) .. (type or 'Error') .. self:colorize(colors.reset) .. ': ' .. error)
+    self:croak(self:colorize(type == 'Warn' and colors.yellow or colors.red) .. (type or 'Error') .. self:colorize(colors.reset) .. ': ' .. error)
 
     if token and self.lines[token.position[1]] then
         local line = self.lines[token.position[1]]:gsub('\t', ' ')
@@ -83,8 +83,8 @@ function frog:throw(token, error, hint, type)
 
         self:croak(self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset) .. highlight(line, self.options))
             :croak(
-                self:colorize(colors.grey) .. '| ' .. self:colorize(colors.reset)
-                .. string.rep(' ', token.position[2] - 1) .. self:colorize(colors.grey)
+                self:colorize(colors.grey) .. '| '
+                .. string.rep('-', token.position[2] - 1)
                 .. string.rep('^', token.type == 'string'
                 and #token.characters + 2 or token.characters and #token.characters or 1)
                 .. self:colorize(colors.reset)
@@ -105,6 +105,20 @@ function frog:dump(stage, object)
 
         if file then
             file:write(json(object))
+        else
+            self:error('Could not open file: ' .. self.options['o'])
+        end
+
+        os.exit(0)
+    end
+end
+
+function frog:write(stage, object)
+    if self.options['P'] == stage then
+        local file = io.open(self.options['o'], 'w')
+
+        if file then
+            file:write(object)
         else
             self:error('Could not open file: ' .. self.options['o'])
         end

@@ -182,4 +182,4 @@ end
 
 --interpreter.new(bytecode.examples.fib, {}, { 20 } )
 --interpreter.new(bytecode.examples.fizzbuzz, {}, { "Fizz", "Buzz", "FizzBuzz", 15, 5, 3 } )
-interpreter.new(bytecode.examples.hello_world, {}, { "The Sky" } )
+--interpreter.new(bytecode.examples.hello_world, {}, { "The Sky" } )

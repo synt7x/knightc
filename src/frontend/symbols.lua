@@ -1,4 +1,5 @@
 local json = require('lib/json')
+local frog = require('lib/frog')
 local parser = require('src/frontend/parser')
 local traversal = parser.traversal
 
@@ -27,13 +28,15 @@ function symbols:add(identifier, parent, deps)
         self.map[name] = {
             tag = self.tag, types = {},
             deps = {}, revdeps = {},
-            defs = {}
+            defs = {}, uses = {}
         }
     end
 
     if parent and parent.type == 'assignment' then
         table.insert(self.map[name].defs, parent)
     end
+
+    table.insert(self.map[name].uses, identifier)
 
     if deps then
         for i, dep in ipairs(deps) do
@@ -57,18 +60,30 @@ function symbols:reverse()
             local reference = self.map[dep]
             reference.revdeps[name] = symbol.tag
         end
+
+        if #symbol.defs == 0 then
+            frog:throw(
+                symbol.uses[1].token,
+                'No definition found for ' .. name,
+                'Try checking the spelling or removing this identifier',
+                'Symbols'
+            )
+        end
+
+        symbol.uses = nil
     end
 end
 
 function symbols:collect(...)
     local collected = {}
+    local args = {...} -- Collect varargs into a table
 
-    for i, v in ipairs(... or {}) do
+    for _, v in ipairs(args or {}) do
         if v and v.characters then
             table.insert(collected, v)
         elseif v then
-            for j, v in ipairs(v) do
-                table.insert(collected, j)
+            for _, v in ipairs(v) do
+                table.insert(collected, v)
             end
         end
     end
@@ -77,12 +92,7 @@ function symbols:collect(...)
 end
 
 function symbols:deps(ast)
-    if traversal.binary[ast.type] then
-        return self:collect(
-            self:deps(ast.left),
-            self:deps(ast.right)
-        )
-    elseif traversal.unary[ast.type] then
+    if traversal.unary[ast.type] then
         return self:collect(
             self:deps(ast.argument)
         )
@@ -91,9 +101,20 @@ function symbols:deps(ast)
             ast
         })
     elseif ast.type == 'assignment' then
-        return
+        local val = self:deps(ast.value)
+        return self:collect(
+            self:deps(ast.name),
+            val
+        )
+    elseif traversal.binary[ast.type] then
+        return self:collect(
+            self:deps(ast.left),
+            self:deps(ast.right)
+        )
     elseif ast.type == 'block' then
-        return
+        return self:collect(
+            self:deps(ast.body)
+        )
     elseif ast.type == 'call' then
         return self:collect(
             self:deps(ast.name)
