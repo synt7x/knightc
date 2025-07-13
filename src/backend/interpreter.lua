@@ -1,5 +1,5 @@
 local interpreter = {}
-local bytecode = require('src/backend/bytecode')
+local bytecode = require('src/backend/bytes')
 local json = require('lib/json')
 
 function interpreter.new(ir, data, constants)

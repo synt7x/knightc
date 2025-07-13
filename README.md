@@ -2,6 +2,10 @@
 
 Faithful[*](#differences) [Knight](https://github.com/knight-lang/knight-lang) optimizing compiler targeting x86, x86-64, AArch64, and ARM. Compiles Knight programs into static executables for Windows and Linux, without any undefined behavior.
 
+## Disclaimer
+
+This project is currently in open beta, and thus its features are not complete. Feel free to contribute, test, and keep the compiler to specification.
+
 ## Usage
 
 To run knightc, you must atleast have [Lua 5.1](https://lua.org) or LuaJIT (recommended) installed. If you have Lua installed, you can run:
@@ -27,9 +31,13 @@ This invokes knightc, and all arguments can directly follow the main command. Be
   * Specifies the executable instruction set; note that this is different from the file format. This value defaults to the instruction set most commonly used by your operating system.
     * x64, x86, arm, aarch64
 
-### Differences
+## Differences
 
 Due to knightc being a compiler, not everything is going to follow the Knight specification exactly. Here are the major differences:
 
 * Command line input for the compiler will differ from a standard Knight interpreter, as the compiler does not execute code. For more information read [Usage](#usage).
 * Undefined behavior is handled directly by the compiler, and is ensured by typechecking. Undefined behavior *should* result in an exception at compile time.
+
+## Testing
+
+The `busted` testing framework is used for end-to-end testing with a custom test runner. To run the compiler tests, first install [LuaRocks](https://luarocks.org)

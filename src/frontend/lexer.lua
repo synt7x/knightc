@@ -39,6 +39,7 @@ function lexer.new(input)
     if self.token.type then
         if self.token.type == 'string' then
             frog:throw(
+                self.token,
                 'Unclosed string value reaching to end of file.',
                 'Try inserting a closing quote where it needs to be.'
             )
